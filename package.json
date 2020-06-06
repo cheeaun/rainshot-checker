@@ -1,0 +1,10 @@
+{
+  "name": "rainshot-checker",
+  "version": "1.0.0",
+  "description": "",
+  "author": "Lim Chee Aun",
+  "license": "ISC",
+  "scripts": {
+    "start": "npx live-server"
+  }
+}
