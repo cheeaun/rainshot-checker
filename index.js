@@ -113,6 +113,8 @@ function geoCurvePath(curve, projection, context) {
   };
 }
 
+// 1. https://observablehq.com/@dvreed77/chaikin
+// 2. https://www.npmjs.com/package/chaikin
 function cut(start, end, ratio) {
   const r1 = [
     start[0] * (1 - ratio) + end[0] * ratio,
@@ -124,34 +126,33 @@ function cut(start, end, ratio) {
   ];
   return [r1, r2];
 }
-function chaikin(curve, iterations = 1, closed = false, ratio = 0.25) {
-  if (ratio > 0.5) {
-    ratio = 1 - ratio;
+function chaikin(pts, iterations = 1, ratio = 0.25) {
+  if (iterations > 10) iterations = 10;
+  if (iterations == 0) return pts;
+
+  const nCorners = pts.length;
+
+  const newPts = [];
+  for (let i = 0; i < nCorners; i++) {
+    const ptA = pts[i];
+    const ptB = pts[(i + 1) % nCorners];
+
+    const [newPtA, newPtB] = cut(ptA, ptB, ratio);
+
+    newPts.push(newPtA, newPtB);
   }
 
-  for (let i = 0; i < iterations; i++) {
-    let refined = [];
-    refined.push(curve[0]);
-
-    for (let j = 1; j < curve.length; j++) {
-      let points = cut(curve[j - 1], curve[j], ratio);
-      refined = refined.concat(points);
-    }
-
-    if (closed) {
-      refined = refined.concat(cut(curve[curve.length - 1], curve[0], ratio));
-    } else {
-      refined.push(curve[curve.length - 1]);
-    }
-
-    curve = refined;
-  }
-  return curve;
+  return chaikin(newPts, ratio, iterations - 1);
 }
 function chaikinPath(conValue) {
   const { coordinates } = conValue;
   if (coordinates.length) {
-    conValue.coordinates = coordinates.map((c1) => c1.map((c2) => chaikin(c2)));
+    conValue.coordinates = coordinates.map((c1) =>
+      c1.map((c2) => {
+        c2.pop();
+        return chaikin(c2);
+      }),
+    );
   }
   return svgPath(conValue);
 }
@@ -161,7 +162,8 @@ function convertValues2SVG(values, width, height) {
   const conValues = contour.size([width, height])(values);
   let svg = '';
   for (let i = 0, l = conValues.length; i < l; i++) {
-    const con = simplifyCon(conValues[i]);
+    const con = conValues[i];
+    // const con = simplifyCon(conValues[i]);
     let d;
     switch (smoothingMode) {
       case 'chaikin': {
